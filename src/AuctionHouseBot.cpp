@@ -30,6 +30,7 @@
 using namespace std;
 vector<uint32> npcItems;
 vector<uint32> lootItems;
+vector<uint32> additionalItems;
 vector<uint32> greyTradeGoodsBin;
 vector<uint32> whiteTradeGoodsBin;
 vector<uint32> greenTradeGoodsBin;
@@ -384,6 +385,10 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
                     stackCount = urand(1, item->GetMaxStackCount());
                 else
                     stackCount = 1;
+
+                if (prototype->Class == ITEM_CLASS_GLYPH || prototype->Class == ITEM_CLASS_GEM)
+                    stackCount = 1;
+
                 buyoutPrice *= urand(config->GetMinPrice(prototype->Quality), config->GetMaxPrice(prototype->Quality));
                 buyoutPrice /= 100;
                 bidPrice = buyoutPrice * urand(config->GetMinBidPrice(prototype->Quality), config->GetMaxBidPrice(prototype->Quality));
@@ -829,6 +834,18 @@ void AuctionHouseBot::Initialize()
                 LOG_ERROR("module", "AuctionHouseBot: \"{}\" failed", lootQuery);
         }
 
+        char additionalQuery[] = "SELECT distinct item FROM mod_auctionhousebot_additional_items";
+        results = WorldDatabase.Query(additionalQuery);
+        if (results)
+        {
+            do
+            {
+                Field* fields = results->Fetch();
+                additionalItems.push_back(fields[0].Get<uint32>());
+
+            } while (results->NextRow());
+        }
+
         ItemTemplateContainer const* its = sObjectMgr->GetItemTemplateStore();
         for (ItemTemplateContainer::const_iterator itr = its->begin(); itr != its->end(); ++itr)
         {
@@ -933,6 +950,7 @@ void AuctionHouseBot::Initialize()
             {
                 bool isVendorItem = false;
                 bool isLootItem = false;
+                bool isAdditionalItem = false;
 
                 for (unsigned int i = 0; (i < npcItems.size()) && (!isVendorItem); i++)
                 {
@@ -944,7 +962,12 @@ void AuctionHouseBot::Initialize()
                     if (itr->second.ItemId == lootItems[i])
                         isLootItem = true;
                 }
-                if ((!isLootItem) && (!isVendorItem))
+                for (unsigned int i = 0; (i < additionalItems.size()) && (!isAdditionalItem); i++)
+                {
+                    if (itr->second.ItemId == additionalItems[i])
+                        isAdditionalItem = true;
+                }
+                if ((!isLootItem) && (!isVendorItem) && (!isAdditionalItem))
                     continue;
             }
 
@@ -952,6 +975,7 @@ void AuctionHouseBot::Initialize()
             {
                 bool isVendorTG = false;
                 bool isLootTG = false;
+                bool isAdditionalTG = false;
 
                 for (unsigned int i = 0; (i < npcItems.size()) && (!isVendorTG); i++)
                 {
@@ -963,7 +987,12 @@ void AuctionHouseBot::Initialize()
                     if (itr->second.ItemId == lootItems[i])
                         isLootTG = true;
                 }
-                if ((!isLootTG) && (!isVendorTG))
+                for (unsigned int i = 0; (i < additionalItems.size()) && (!isAdditionalTG); i++)
+                {
+                    if (itr->second.ItemId == additionalItems[i])
+                        isAdditionalTG = true;
+                }
+                if ((!isLootTG) && (!isVendorTG) && (!isAdditionalTG))
                     continue;
             }
 
