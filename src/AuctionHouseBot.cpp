@@ -26,6 +26,7 @@
 #include "WorldSession.h"
 #include "GameTime.h"
 #include "DatabaseEnv.h"
+#include "Progression.h"
 
 #include <set>
 
@@ -260,6 +261,31 @@ void AuctionHouseBot::populateItemCandidateList()
         // Never store itemID zero
         if (itr->second.ItemId == 0)
             continue;
+
+        if ((sProgression->GetPatchId() < 6 && itr->second.ItemLevel > 63) ||
+            (sProgression->GetPatchId() < 7 && itr->second.ItemLevel > 66) ||
+            (sProgression->GetPatchId() < 12 && itr->second.ItemLevel > 76) ||
+            (sProgression->GetPatchId() < 13 && itr->second.ItemLevel > 110) ||
+            (sProgression->GetPatchId() < 14 && itr->second.ItemLevel > 120) ||
+            (sProgression->GetPatchId() < 17 && itr->second.ItemLevel > 133) ||
+            (sProgression->GetPatchId() < 18 && itr->second.ItemLevel > 200) ||
+            (sProgression->GetPatchId() < 19 && itr->second.ItemLevel > 213) ||
+            (sProgression->GetPatchId() < 20 && itr->second.ItemLevel > 226) ||
+            (sProgression->GetPatchId() < 21 && itr->second.ItemLevel > 245))
+        {
+            continue;
+        }
+
+        if ((sProgression->GetPatchId() < 12 && itr->second.ItemId >= 23728) ||
+            (sProgression->GetPatchId() < 17 && itr->second.ItemId >= 35570 && itr->second.ItemId != 36737 && itr->second.ItemId != 37739 && itr->second.ItemId != 37740))
+        {
+            continue;
+        }
+
+        if (sProgression->GetPatchId() < 17 && itr->second.Class == ITEM_CLASS_GLYPH)
+        {
+            continue;
+        }
 
         // Always store items that are exceptions
         if (includeItemIDExecptions.find(itr->second.ItemId) != includeItemIDExecptions.end())
