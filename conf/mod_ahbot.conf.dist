@@ -65,6 +65,111 @@ AuctionHouseBot.Neutral.BidInterval = 1
 AuctionHouseBot.Neutral.BidsPerInterval = 1
 
 ###############################################################################
+#    AuctionHouseBot.ListProportion.*
+#        Determines how many of the listings, proportionally, show up as new auctions
+#		 "0" will mean the item never shows up.  Values must be whole numbers.
+#       Defaults:    Consumable: 2
+#                    Container: 2
+#                    Weapon: 6
+#                    Gem: 2
+#                    Armor: 6
+#                    Reagent: 1
+#                    Projectile: 2
+#                    TradeGood: 22
+#                    Generic: 1
+#                    Recipe: 3
+#                    Quiver: 1
+#                    Quest: 2
+#                    Key: 1
+#                    Misc: 0
+#                    Glyph: 2
+###############################################################################
+
+AuctionHouseBot.ListProportion.Consumable = 2
+AuctionHouseBot.ListProportion.Container = 2
+AuctionHouseBot.ListProportion.Weapon = 6
+AuctionHouseBot.ListProportion.Gem = 2
+AuctionHouseBot.ListProportion.Armor = 6
+AuctionHouseBot.ListProportion.Reagent = 1 
+AuctionHouseBot.ListProportion.Projectile = 2
+AuctionHouseBot.ListProportion.TradeGood = 22
+AuctionHouseBot.ListProportion.Generic = 1
+AuctionHouseBot.ListProportion.Recipe = 3
+AuctionHouseBot.ListProportion.Quiver = 1
+AuctionHouseBot.ListProportion.Quest = 2
+AuctionHouseBot.ListProportion.Key = 1
+AuctionHouseBot.ListProportion.Misc = 0
+AuctionHouseBot.ListProportion.Glyph = 2
+
+###############################################################################
+#    AuctionHouseBot.PriceMinimumCenterBase.*
+#        Category-level price minimums, in copper, before any multipliers come
+#        into play.  Value shouldn't be zero, and the base minimum price will
+#        actually be a +/- 25% range of this value.  Used to catch 0 cost or
+#        extremely low cost items
+###############################################################################
+
+AuctionHouseBot.PriceMinimumCenterBase.Consumable = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Container = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Weapon = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Gem = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Armor = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Reagent = 1000 
+AuctionHouseBot.PriceMinimumCenterBase.Projectile = 5
+AuctionHouseBot.PriceMinimumCenterBase.TradeGood = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Generic = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Recipe = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Quiver = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Quest = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Key = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Misc = 1000
+AuctionHouseBot.PriceMinimumCenterBase.Glyph = 1000
+
+###############################################################################
+#    AuctionHouseBot.PriceMinimumCenterBase.OverrideItems
+#        Comma separated list of items in the format of "itemID:PriceMinCopper"
+#        which is an override of the PriceMinimumCenterBase", a value that is
+#        used before variation and multipliers
+#	 Example: "2589:1000000,4306:100000" would set the minimum price center
+#      of linen cloth to 100 gold and silk cloth to 10 gold each
+###############################################################################
+
+AuctionHouseBot.PriceMinimumCenterBase.OverrideItems = 
+
+###############################################################################
+#    AuctionHouseBot.PriceMultiplier.*
+#        Category/Quality-level modifier values for the prices of items, which can be
+#        represented as decimal numbers, and must be > 0.  Keep in mind that
+#		 the pricing algorithm has many steps to it and this is just a tuning
+#        modifier.
+###############################################################################
+
+AuctionHouseBot.PriceMultiplier.Category.Consumable = 1
+AuctionHouseBot.PriceMultiplier.Category.Container = 1
+AuctionHouseBot.PriceMultiplier.Category.Weapon = 1
+AuctionHouseBot.PriceMultiplier.Category.Gem = 1
+AuctionHouseBot.PriceMultiplier.Category.Armor = 1
+AuctionHouseBot.PriceMultiplier.Category.Reagent = 1 
+AuctionHouseBot.PriceMultiplier.Category.Projectile = 1
+AuctionHouseBot.PriceMultiplier.Category.TradeGood = 2
+AuctionHouseBot.PriceMultiplier.Category.Generic = 1
+AuctionHouseBot.PriceMultiplier.Category.Recipe = 1
+AuctionHouseBot.PriceMultiplier.Category.Quiver = 1
+AuctionHouseBot.PriceMultiplier.Category.Quest = 1
+AuctionHouseBot.PriceMultiplier.Category.Key = 1
+AuctionHouseBot.PriceMultiplier.Category.Misc = 1
+AuctionHouseBot.PriceMultiplier.Category.Glyph = 1
+
+AuctionHouseBot.PriceMultiplier.Quality.Poor = 1
+AuctionHouseBot.PriceMultiplier.Quality.Normal = 1
+AuctionHouseBot.PriceMultiplier.Quality.Uncommon = 1.8
+AuctionHouseBot.PriceMultiplier.Quality.Rare = 1.9
+AuctionHouseBot.PriceMultiplier.Quality.Epic = 2.1
+AuctionHouseBot.PriceMultiplier.Quality.Legendary = 3
+AuctionHouseBot.PriceMultiplier.Quality.Artifact = 3
+AuctionHouseBot.PriceMultiplier.Quality.Heirloom = 3
+
+###############################################################################
 #    AuctionHouseBot.RandomStackRatio.*
 #        Used to determine how often a stack of the class will be single or randomly-size stacked when posted
 #        Value needs to be between 0 and 100, no decimal.  Anything higher than 100 will be treated as 100
@@ -115,6 +220,8 @@ AuctionHouseBot.RandomStackRatio.Glyph = 0
 #
 #    AuctionHouseBot.DisabledCraftedItemIDs
 #        Additional Comma separated list of itemIDs to exclude from listing by the seller
+#        which were originally put in to remove crafted items and fish, in order
+#        encourage people to level their tradeskills
 #        Ranges using a dash (-) can also be used
 ###############################################################################
 
