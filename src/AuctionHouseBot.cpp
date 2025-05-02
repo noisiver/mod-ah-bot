@@ -445,7 +445,7 @@ void AuctionHouseBot::populateItemCandidateList()
     }
 }
 
-void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
+void AuctionHouseBot::addNewAuctions(Player* AHBplayer, AHBConfig *config)
 {
     if (!AHBSeller)
     {
@@ -458,10 +458,7 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
     uint32 maxItems = config->GetMaxItems();
 
     if (maxItems == 0)
-    {
-        //if (debug_Out) sLog->outString( "AHSeller: Auctions disabled");
         return;
-    }
 
     AuctionHouseEntry const* ahEntry = sAuctionMgr->GetAuctionHouseEntryFromFactionTemplate(config->GetAHFID());
     if (!ahEntry)
@@ -584,7 +581,7 @@ void AuctionHouseBot::addNewAuctions(Player *AHBplayer, AHBConfig *config)
     }
 }
 
-void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *config, WorldSession *session)
+void AuctionHouseBot::addNewAuctionBuyerBotBid(Player* AHBplayer, AHBConfig *config)
 {
     if (!AHBBuyer)
     {
@@ -593,7 +590,7 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
         return;
     }
 
-    QueryResult result = CharacterDatabase.Query("SELECT id FROM auctionhouse WHERE itemowner<>{} AND buyguid<>{}", AHBplayerGUID, AHBplayerGUID);
+    QueryResult result = CharacterDatabase.Query("SELECT id FROM auctionhouse WHERE itemowner NOT IN ({}) AND buyguid NOT IN ({})", AHCharactersGUIDsForQuery, AHCharactersGUIDsForQuery);
 
     if (!result)
         return;
@@ -717,7 +714,7 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
                     {
                         // mail to last bidder and return money
                         auto trans = CharacterDatabase.BeginTransaction();
-                        sAuctionMgr->SendAuctionOutbiddedMail(auction, minBidPrice, session->GetPlayer(), trans);
+                        sAuctionMgr->SendAuctionOutbiddedMail(auction, minBidPrice, AHBplayer, trans);
                         CharacterDatabase.CommitTransaction(trans);
                         //pl->ModifyMoney(-int32(price));
                     }
@@ -735,13 +732,12 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
                 //buyout
                 if ((auction->bidder) && (AHBplayer->GetGUID() != auction->bidder))
                 {
-                    sAuctionMgr->SendAuctionOutbiddedMail(auction, auction->buyout, session->GetPlayer(), trans);
+                    sAuctionMgr->SendAuctionOutbiddedMail(auction, auction->buyout, AHBplayer, trans);
                 }
                 auction->bidder = AHBplayer->GetGUID();
                 auction->bid = auction->buyout;
 
                 // Send mails to buyer & seller
-                //sAuctionMgr->SendAuctionSalePendingMail(auction, trans);
                 sAuctionMgr->SendAuctionSuccessfulMail(auction, trans);
                 sAuctionMgr->SendAuctionWonMail(auction, trans);
                 auction->DeleteFromDB(trans);
@@ -756,15 +752,19 @@ void AuctionHouseBot::addNewAuctionBuyerBotBid(Player *AHBplayer, AHBConfig *con
 
 void AuctionHouseBot::Update()
 {
-    time_t _newrun = time(NULL);
-    if ((!AHBSeller) && (!AHBBuyer))
+    if ((AHBSeller == false) && (AHBBuyer == false))
         return;
+    if (AHCharacters.size() == 0)
+        return;
+    time_t _newrun = time(NULL);
 
-    std::string accountName = "AuctionHouseBot" + std::to_string(AHBplayerAccount);
-
-    WorldSession _session(AHBplayerAccount, std::move(accountName), nullptr, SEC_PLAYER, sWorld->getIntConfig(CONFIG_EXPANSION), 0, LOCALE_enUS, 0, false, false, 0);
+    // Randomly select the bot to load, and load it
+    uint32 botIndex = urand(0, AHCharacters.size() - 1);
+    CurrentBotCharGUID = AHCharacters[botIndex].CharacterGUID;
+    std::string accountName = "AuctionHouseBot" + std::to_string(AHCharacters[botIndex].AccountID);
+    WorldSession _session(AHCharacters[botIndex].AccountID, std::move(accountName), nullptr, SEC_PLAYER, sWorld->getIntConfig(CONFIG_EXPANSION), 0, LOCALE_enUS, 0, false, false, 0);
     Player _AHBplayer(&_session);
-    _AHBplayer.Initialize(AHBplayerGUID);
+    _AHBplayer.Initialize(AHCharacters[botIndex].CharacterGUID);
     ObjectAccessor::AddObject(&_AHBplayer);
 
     // Add New Bids
@@ -773,18 +773,14 @@ void AuctionHouseBot::Update()
         addNewAuctions(&_AHBplayer, &AllianceConfig);
         if (((_newrun - _lastrun_a) >= (AllianceConfig.GetBiddingInterval() * MINUTE)) && (AllianceConfig.GetBidsPerInterval() > 0))
         {
-            //if (debug_Out) sLog->outError( "AHBuyer: %u seconds have passed since last bid", (_newrun - _lastrun_a));
-            //if (debug_Out) sLog->outError( "AHBuyer: Bidding on Alliance Auctions");
-            addNewAuctionBuyerBotBid(&_AHBplayer, &AllianceConfig, &_session);
+            addNewAuctionBuyerBotBid(&_AHBplayer, &AllianceConfig);
             _lastrun_a = _newrun;
         }
 
         addNewAuctions(&_AHBplayer, &HordeConfig);
         if (((_newrun - _lastrun_h) >= (HordeConfig.GetBiddingInterval() * MINUTE)) && (HordeConfig.GetBidsPerInterval() > 0))
         {
-            //if (debug_Out) sLog->outError( "AHBuyer: %u seconds have passed since last bid", (_newrun - _lastrun_h));
-            //if (debug_Out) sLog->outError( "AHBuyer: Bidding on Horde Auctions");
-            addNewAuctionBuyerBotBid(&_AHBplayer, &HordeConfig, &_session);
+            addNewAuctionBuyerBotBid(&_AHBplayer, &HordeConfig);
             _lastrun_h = _newrun;
         }
     }
@@ -792,11 +788,10 @@ void AuctionHouseBot::Update()
     addNewAuctions(&_AHBplayer, &NeutralConfig);
     if (((_newrun - _lastrun_n) >= (NeutralConfig.GetBiddingInterval() * MINUTE)) && (NeutralConfig.GetBidsPerInterval() > 0))
     {
-        //if (debug_Out) sLog->outError( "AHBuyer: %u seconds have passed since last bid", (_newrun - _lastrun_n));
-        //if (debug_Out) sLog->outError( "AHBuyer: Bidding on Neutral Auctions");
-        addNewAuctionBuyerBotBid(&_AHBplayer, &NeutralConfig, &_session);
+        addNewAuctionBuyerBotBid(&_AHBplayer, &NeutralConfig);
         _lastrun_n = _newrun;
     }
+
     ObjectAccessor::RemoveObject(&_AHBplayer);
 }
 
@@ -814,10 +809,19 @@ void AuctionHouseBot::InitializeConfiguration()
 
     AHBSeller = sConfigMgr->GetOption<bool>("AuctionHouseBot.EnableSeller", false);
     AHBBuyer = sConfigMgr->GetOption<bool>("AuctionHouseBot.EnableBuyer", false);
+    if (AHBSeller == false && AHBBuyer == false)
+        return;
+    string charString = sConfigMgr->GetOption<std::string>("AuctionHouseBot.GUIDs", "0");
+    if (charString == "0")
+    {
+        AHBBuyer = false;
+        AHBSeller = false;
+        LOG_INFO("module", "AuctionHouseBot: AuctionHouseBot.GUIDs is '0' so this module will be disabled");
+        return;
+    }
+    AddCharacters(charString);
 
-    AHBplayerAccount = sConfigMgr->GetOption<uint32>("AuctionHouseBot.Account", 0);
-    AHBplayerGUID = sConfigMgr->GetOption<uint32>("AuctionHouseBot.GUID", 0);
-    ItemsPerCycle = sConfigMgr->GetOption<uint32>("AuctionHouseBot.ItemsPerCycle", 200);
+    ItemsPerCycle = sConfigMgr->GetOption<uint32>("AuctionHouseBot.ItemsPerCycle", 75);
 
     // Stack Ratios
     RandomStackRatioConsumable = GetRandomStackValue("AuctionHouseBot.RandomStackRatio.Consumable", 20);
@@ -902,16 +906,6 @@ void AuctionHouseBot::InitializeConfiguration()
     AddDisabledItems(sConfigMgr->GetOption<std::string>("AuctionHouseBot.DisabledItemIDs", ""));
     AddDisabledItems(sConfigMgr->GetOption<std::string>("AuctionHouseBot.DisabledCraftedItemIDs", ""));
 
-    if ((AHBplayerAccount != 0) || (AHBplayerGUID != 0))
-    {
-        QueryResult result = CharacterDatabase.Query("SELECT 1 FROM characters WHERE account = {} AND guid = {}", AHBplayerAccount, AHBplayerGUID);
-        if (!result)
-        {
-            LOG_ERROR("module", "AuctionHouseBot: The account/GUID-information set for your AHBot is incorrect (account: {} guid: {})", AHBplayerAccount, AHBplayerGUID);
-            return;
-        }
-    }
-
     if (!sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION))
     {
         AllianceConfig.SetMinItems(sConfigMgr->GetOption<uint32>("AuctionHouseBot.Alliance.MinItems", 15000));
@@ -952,6 +946,65 @@ void AuctionHouseBot::AddToDisabledItems(std::set<uint32>& workingDisabledItemID
     {
         workingDisabledItemIDs.insert(disabledItemID);
     }
+}
+
+void AuctionHouseBot::AddCharacters(std::string characterGUIDString)
+{
+    std::string delimitedValue;
+    std::stringstream characterGUIDStream;
+    std::set<uint32> characterGUIDs;
+
+    // Grab from the string
+    characterGUIDStream.str(characterGUIDString);
+    while (std::getline(characterGUIDStream, delimitedValue, ',')) // Process each charecter GUID in the string, delimited by the comma ","
+    {
+        std::string valueOne;
+        std::stringstream characterGUIDStream(delimitedValue);
+        characterGUIDStream >> valueOne;
+        auto characterGUID = atoi(valueOne.c_str());
+        if (characterGUID == 0)
+            continue;
+        if (characterGUIDs.find(characterGUID) != characterGUIDs.end())
+        {
+            if (debug_Out)
+                LOG_ERROR("module", "AuctionHouseBot: Duplicate character with GUID of {} found, skipping", characterGUID);
+        }
+        else
+            characterGUIDs.insert(characterGUID);
+    }
+
+    // Lookup accounts and add them
+    if (characterGUIDs.empty() == true)
+    {
+        LOG_ERROR("module", "AuctionHouseBot: No character GUIDs were supplied. Be sure to set AuctionHouseBot.GUIDs");
+        return;
+    }
+    AHCharactersGUIDsForQuery = "";
+    bool first = true;
+    for (uint32 curGUID : characterGUIDs)
+    {
+        if (first == false)
+        {
+            AHCharactersGUIDsForQuery += ", ";
+        }
+        AHCharactersGUIDsForQuery += std::to_string(curGUID);
+        first = false;
+    }
+    QueryResult queryResult = CharacterDatabase.Query("SELECT `guid`, `account` FROM `characters` WHERE guid IN ({})", AHCharactersGUIDsForQuery);
+    if (!queryResult || queryResult->GetRowCount() == 0)
+    {
+        LOG_ERROR("module", "AuctionHouseBot: No character GUIDs found when looking up values from AuctionHouseBot.GUIDs from the character database 'characters.guid'.");
+        return;
+    }
+    do
+    {
+        // Pull the data out
+        Field* fields = queryResult->Fetch();
+        uint32 guid = fields[0].Get<uint32>();
+        uint32 account = fields[1].Get<uint32>();
+        AuctionHouseBotCharacter curChar = AuctionHouseBotCharacter(account, guid);
+        AHCharacters.push_back(curChar);
+    } while (queryResult->NextRow());
 }
 
 void AuctionHouseBot::AddDisabledItems(std::string disabledItemIdString)
